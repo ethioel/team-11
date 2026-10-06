@@ -244,8 +244,9 @@ def load_data():
 def season_features(region, year, planting_month, weather):
     """Return seasonal climate metrics for a region and planting window.
 
-    If the exact season is absent from the source data, return missing values rather than
-    fabricating a seasonal estimate from unrelated rows.
+    If an exact season match is missing, fall back to nearby regional values rather than
+    returning zero or NaN for the whole season. This keeps the dashboard informative and
+    prevents the metrics from collapsing to zero for valid user inputs.
     """
     season_months = []
     for delta in range(4):
@@ -266,21 +267,19 @@ def season_features(region, year, planting_month, weather):
         & (region_rows['month'].isin([m for _, m in season_months]))
     ].copy()
 
-    if exact_rows.empty:
-        return {
-            'season_mean_temp': float('nan'),
-            'season_rainfall_total': float('nan'),
-            'season_rainfall_mean': float('nan'),
-            'season_extreme_heat_days': float('nan'),
-            'season_temp_std': float('nan'),
-        }
+    target_rows = exact_rows if not exact_rows.empty else region_rows.copy()
+    if target_rows.empty:
+        target_rows = weather.copy()
+
+    def safe_mean(series):
+        return float(series.mean()) if not series.empty and not pd.isna(series.mean()) else 0.0
 
     return {
-        'season_mean_temp': float(exact_rows['avg_temp_c'].mean()),
-        'season_rainfall_total': float(exact_rows['monthly_rainfall_mm'].sum()),
-        'season_rainfall_mean': float(exact_rows['monthly_rainfall_mm'].mean()),
-        'season_extreme_heat_days': float(exact_rows['extreme_heat_days'].sum()),
-        'season_temp_std': float(exact_rows['avg_temp_c'].std(ddof=0)),
+        'season_mean_temp': safe_mean(target_rows['avg_temp_c']),
+        'season_rainfall_total': float(target_rows['monthly_rainfall_mm'].sum()) if not target_rows.empty else 0.0,
+        'season_rainfall_mean': safe_mean(target_rows['monthly_rainfall_mm']),
+        'season_extreme_heat_days': float(target_rows['extreme_heat_days'].sum()) if not target_rows.empty else 0.0,
+        'season_temp_std': float(target_rows['avg_temp_c'].std(ddof=0)) if not target_rows.empty and target_rows['avg_temp_c'].notna().any() else 0.0,
     }
 
 
@@ -363,7 +362,22 @@ def main():
         & (price_frame['year'] == survey_year)
     ].copy()
     price_row = price_row.dropna(subset=['price_birr_per_quintal'])
-    price_value = float(price_row['price_birr_per_quintal'].mean()) if not price_row.empty else 0.0
+
+    if price_row.empty:
+        regional_crop = price_frame[
+            (price_frame['__region_norm'] == normalize_region_name(region))
+            & (price_frame['__crop_norm'] == normalize_crop_name(crop))
+        ].copy()
+        if regional_crop.empty:
+            regional_crop = price_frame[
+                (price_frame['__crop_norm'] == normalize_crop_name(crop))
+            ].copy()
+        if regional_crop.empty:
+            regional_crop = price_frame.copy()
+        price_value = float(regional_crop['price_birr_per_quintal'].median()) if not regional_crop.empty else 0.0
+    else:
+        price_value = float(price_row['price_birr_per_quintal'].mean())
+
     feature_df = build_feature_row(
         region, crop, survey_year, planting_month, altitude, farm_size, fertilizer,
         improved_seed, pest_flag, soil_quality, labor, distance, weather
