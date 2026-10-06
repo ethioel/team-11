@@ -1,0 +1,12 @@
+file,column(s),issue type,number of affected rows,percentage affected,fix,justification
+plot_train.csv,rainfall_mm_season,missing values,449,0.02975480450629556,median imputation by crop-region-year strata,self-reported rainfall had a small amount of missingness; median preserves original scale.
+plot_train.csv,fertilizer_kg_per_ha,missing values,748,0.049569251159708415,median imputation by crop and region,"fertilizer is skewed, so median is robust and preserves typical practice levels."
+plot_train.csv,soil_quality_index,missing values,608,0.040291583830351224,median imputation within crop-region groups,soil quality is a moderate-quality field characteristic with limited missingness.
+plot_train.csv,labor_days_per_ha,-999 sentinel,488,0.032339297548045064,replace -999 with median,this is an impossible labor value and should be treated as missing rather than a real observation.
+plot_test.csv,rainfall_mm_season,missing values,125,0.03333333333333333,median imputation by crop-region-year strata,self-reported rainfall had a small amount of missingness; median preserves original scale.
+plot_test.csv,fertilizer_kg_per_ha,missing values,189,0.0504,median imputation by crop and region,"fertilizer is skewed, so median is robust and preserves typical practice levels."
+plot_test.csv,soil_quality_index,missing values,125,0.03333333333333333,median imputation within crop-region groups,soil quality is a moderate-quality field characteristic with limited missingness.
+plot_test.csv,labor_days_per_ha,-999 sentinel,100,0.02666666666666667,replace -999 with median,this is an impossible labor value and should be treated as missing rather than a real observation.
+regional_weather.csv,avg_temp_c,missing values,1,0.004310344827586207,fill with regional-month median,temperature gaps are small and can be estimated from the same region-month context.
+regional_weather.csv,monthly_rainfall_mm,missing values,2,0.008620689655172414,fill with regional-month median,"monthly rainfall is highly seasonal, so regional medians are a sensible missing-data rule."
+market_prices.csv,price_birr_per_quintal,missing values,4,0.04,fill with median crop-region price,"missing price records are too sparse to drop wholesale and likely reflect incomplete observation, not missing phenomenon."
