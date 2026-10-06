@@ -2,25 +2,6 @@
   "validation_rmse": 0.5375631325065366,
   "validation_mae": 0.3949961002740589,
   "validation_r2": 0.8552587025089208,
-  "cv_5fold_rmse_mean": 0.5324230265716257,
-  "cv_5fold_rmse_std": 0.008357310339721463,
-  "out_of_time_rmse": 0.5495146755677169,
-  "out_of_time_mae": 0.4054993066127836,
-  "out_of_time_r2": 0.8532003299607163,
-  "weather_ablation_rmse": 0.6035912994787699,
-  "weather_ablation_mae": 0.44383715173267635,
-  "weather_ablation_r2": 0.8175182440478982,
-  "tuned_rmse": 0.524100827373254,
-  "tuned_mae": 0.38302463516736135,
-  "tuned_r2": 0.8624174989583956,
-  "best_params": {
-    "model__n_estimators": 200,
-    "model__min_samples_split": 2,
-    "model__min_samples_leaf": 2,
-    "model__max_features": null,
-    "model__max_depth": null
-  },
-  "baseline_rmse": 0.5375631325065366,
-  "baseline_mae": 0.3949961002740589,
-  "baseline_r2": 0.8552587025089208
+  "cv_rmse_mean": 0.5575919245640739,
+  "cv_rmse_std": 0.004612863094440811
 }
