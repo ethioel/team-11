@@ -25,7 +25,7 @@ Predict crop yield (tons/ha) using agronomic and climate features while obeying 
 - `reports/`: cleaning log, summary JSON, comparison CSV
 - `figures/`: model and exploratory visualizations
 - `submission/`: final prediction export
-- `presentation/`: five-slide deck
+- `presentation/`: pptx slide deck
 - `notebooks/`: analysis notebook
 
 ## Environment setup
@@ -48,7 +48,7 @@ streamlit run app/app.py
 ## Key outputs
 
 - `models/final_model.joblib`
-- `submission/team_beso_submission.csv`
+- `submission/team_11_submission.csv`
 - `reports/D_model_summary.json`
 - `reports/D_model_comparison.csv`
 - `reports/A_cleaning_log.csv`
