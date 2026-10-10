@@ -12,6 +12,13 @@ ASSETS_DIR = Path(__file__).resolve().parent / 'assets'
 MODEL_PATH = ASSETS_DIR / 'final_model.joblib'
 PRICE_PATH = ASSETS_DIR / 'cleaned_price.csv'
 WEATHER_PATH = ASSETS_DIR / 'cleaned_weather.csv'
+PROCESSED_DIR = ROOT / 'data' / 'processed'
+
+# Load processed data for analytics (cached)
+@st.cache_data
+def load_processed_data():
+    train = pd.read_csv(PROCESSED_DIR / 'master_train.csv')
+    return train
 
 # Region aliases for normalizing inconsistent labels found in cleaned assets
 REGION_ALIASES = {
@@ -286,6 +293,13 @@ def load_data():
     return prices, weather, model
 
 
+@st.cache_data
+def load_analytics():
+    """Load processed training data for comparison and analysis features."""
+    PROCESSED_DIR = Path(__file__).resolve().parent.parent / 'data' / 'processed'
+    return pd.read_csv(PROCESSED_DIR / 'master_train.csv')
+
+
 def season_features(region, year, planting_month, weather):
     """Return seasonal climate metrics for a region and planting window.
 
@@ -327,11 +341,6 @@ def season_features(region, year, planting_month, weather):
         'season_extreme_heat_days': float(target_rows['extreme_heat_days'].sum()) if not target_rows.empty else 0.0,
         'season_temp_std': float(target_rows['avg_temp_c'].std(ddof=0)) if not target_rows.empty and target_rows['avg_temp_c'].notna().any() else 0.0,
     }
-
-
-def yes_to_int(value):
-    """Convert Yes/No strings to 1/0 integers for the model."""
-    return 1 if value.lower() == 'yes' or value.lower() == 'አዎ' else 0
 
 
 def build_feature_row(region, crop, survey_year, planting_month, altitude, farm_size, fertilizer, improved_seed, pest_flag, soil_quality, labor, distance, weather):
@@ -395,14 +404,14 @@ def main():
         planting_month = st.selectbox(text(current_lang, 'planting_month'), list(range(1, 13)), index=6)
 
         st.markdown('<div style="height: 12px"></div>', unsafe_allow_html=True)
-        altitude = st.slider(text(current_lang, 'altitude'), min_value=0.0, max_value=4000.0, value=2000.0, step=50.0, help='Altitude above sea level in meters')
-        farm_size = st.slider(text(current_lang, 'farm_size'), min_value=0.1, max_value=10.0, value=1.0, step=0.1, help='Total farm area in hectares')
-        fertilizer = st.slider(text(current_lang, 'fertilizer'), min_value=0.0, max_value=200.0, value=30.0, step=5.0, help='Fertilizer applied per hectare')
-        soil_quality = st.slider(text(current_lang, 'soil_quality'), min_value=0.0, max_value=1.0, value=0.5, step=0.05, help='Soil quality index (0=poor, 1=excellent)')
-        labor = st.slider(text(current_lang, 'labor'), min_value=0.0, max_value=200.0, value=40.0, step=5.0, help='Labor days per hectare')
-        distance = st.slider(text(current_lang, 'distance'), min_value=0.0, max_value=100.0, value=12.0, step=1.0, help='Distance to nearest market in km')
-        improved_seed = st.selectbox(text(current_lang, 'improved_seed'), [text(current_lang, 'no'), text(current_lang, 'yes')])
-        pest_flag = st.selectbox(text(current_lang, 'pest_flag'), [text(current_lang, 'no'), text(current_lang, 'yes')])
+        altitude = st.number_input(text(current_lang, 'altitude'), value=2000.0, min_value=0.0, step=50.0)
+        farm_size = st.number_input(text(current_lang, 'farm_size'), value=1.0, min_value=0.01, step=0.1)
+        fertilizer = st.number_input(text(current_lang, 'fertilizer'), value=30.0, min_value=0.0, step=5.0)
+        soil_quality = st.number_input(text(current_lang, 'soil_quality'), value=0.5, min_value=0.0, max_value=1.0, step=0.05)
+        labor = st.number_input(text(current_lang, 'labor'), value=40.0, min_value=0.0, step=5.0)
+        distance = st.number_input(text(current_lang, 'distance'), value=12.0, min_value=0.0, step=1.0)
+        improved_seed = st.selectbox(text(current_lang, 'improved_seed'), [0, 1])
+        pest_flag = st.selectbox(text(current_lang, 'pest_flag'), [0, 1])
 
     price_frame = prices.copy()
     price_frame['__region_norm'] = price_frame['region'].map(normalize_region_name)
@@ -431,13 +440,12 @@ def main():
 
     feature_df = build_feature_row(
         region, crop, survey_year, planting_month, altitude, farm_size, fertilizer,
-        yes_to_int(improved_seed), yes_to_int(pest_flag), soil_quality, labor, distance, weather
+        improved_seed, pest_flag, soil_quality, labor, distance, weather
     )
 
-    with st.spinner('Computing yield forecast...'):
-        prediction = float(model.predict(feature_df)[0])
-        revenue = prediction * farm_size * 10 * price_value
-        season = season_features(region, survey_year, planting_month, weather)
+    prediction = float(model.predict(feature_df)[0])
+    revenue = prediction * farm_size * 10 * price_value
+    season = season_features(region, survey_year, planting_month, weather)
 
     st.markdown(
         f"""
@@ -450,44 +458,45 @@ def main():
     )
 
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(text(current_lang, 'predicted_yield'), f'{prediction:.2f} t/ha')
-    with col2:
-        st.metric(text(current_lang, 'estimated_revenue'), f'{revenue:,.0f} birr')
-    with col3:
-        st.metric(text(current_lang, 'market_price'), f'{price_value:,.0f} birr/quintal')
+    col1.metric(text(current_lang, 'predicted_yield'), f'{prediction:.2f} t/ha')
+    col2.metric(text(current_lang, 'estimated_revenue'), f'{revenue:,.0f} birr')
+    col3.metric(text(current_lang, 'market_price'), f'{price_value:,.0f} birr/quintal')
 
     st.markdown('---')
 
-    with st.expander(text(current_lang, 'farm_assumptions'), expanded=True):
-        st.markdown(f"**{text(current_lang, 'region')}: {region_label(current_lang, region)}**")
-        st.markdown(f"**{text(current_lang, 'crop_type')}: {crop_label(current_lang, crop)}**")
-        st.markdown(f"**{text(current_lang, 'survey_year')}: {survey_year}**")
-        st.markdown(f"**{text(current_lang, 'planting_month')}: {planting_month}**")
-        st.markdown(f"**{text(current_lang, 'altitude')}: {altitude:,.0f} m**")
-        st.markdown(f"**{text(current_lang, 'farm_size')}: {farm_size:.1f} ha**")
-        st.markdown(f"**{text(current_lang, 'fertilizer')}: {fertilizer:.1f} kg/ha**")
-        st.markdown(f"**{text(current_lang, 'soil_quality')}: {soil_quality:.2f}**")
-        st.markdown(f"**{text(current_lang, 'improved_seed')}: {text(current_lang, 'yes') if improved_seed == text(current_lang, 'yes') else text(current_lang, 'no')}**")
-        st.markdown(f"**{text(current_lang, 'pest_flag')}: {text(current_lang, 'yes') if pest_flag == text(current_lang, 'yes') else text(current_lang, 'no')}**")
+    left, right = st.columns(2)
+    with left:
+        st.subheader(text(current_lang, 'farm_assumptions'))
+        summary = pd.DataFrame([
+            {'Metric': text(current_lang, 'region'), 'Value': region_label(current_lang, region)},
+            {'Metric': text(current_lang, 'crop_type'), 'Value': crop_label(current_lang, crop)},
+            {'Metric': text(current_lang, 'planting_month'), 'Value': planting_month},
+            {'Metric': text(current_lang, 'survey_year'), 'Value': survey_year},
+            {'Metric': text(current_lang, 'farm_size'), 'Value': f'{farm_size:.1f} ha'},
+            {'Metric': text(current_lang, 'fertilizer'), 'Value': f'{fertilizer:.1f} kg/ha'},
+            {'Metric': text(current_lang, 'soil_quality'), 'Value': f'{soil_quality:.2f}'},
+            {'Metric': text(current_lang, 'improved_seed'), 'Value': text(current_lang, 'yes') if improved_seed else text(current_lang, 'no')},
+        ])
+        st.dataframe(summary, hide_index=True, use_container_width=True)
 
-    with st.expander(text(current_lang, 'season_outlook'), expanded=True):
-        seasonal_data = [
-            {text(current_lang, 'mean_temp'): f'{season["season_mean_temp"]:.1f} °C', 'raw': season["season_mean_temp"]},
-            {text(current_lang, 'rainfall_total'): f'{season["season_rainfall_total"]:.1f} mm', 'raw': season["season_rainfall_total"]},
-            {text(current_lang, 'rainfall_mean'): f'{season["season_rainfall_mean"]:.1f} mm', 'raw': season["season_rainfall_mean"]},
-            {text(current_lang, 'extreme_heat_days'): f'{season["season_extreme_heat_days"]:.0f}', 'raw': season["season_extreme_heat_days"]},
-            {text(current_lang, 'temp_variability'): f'{season["season_temp_std"]:.1f} °C', 'raw': season["season_temp_std"]},
-        ]
-        seasonal_df = pd.DataFrame(seasonal_data).drop(columns=['raw'])
-        st.dataframe(seasonal_df, hide_index=True, use_container_width=True)
+    with right:
+        st.subheader(text(current_lang, 'season_outlook'))
+        seasonal = pd.DataFrame([
+            {'Metric': text(current_lang, 'mean_temp'), 'Value': f'{season["season_mean_temp"]:.1f} °C' if not pd.isna(season["season_mean_temp"]) else 'No data'},
+            {'Metric': text(current_lang, 'rainfall_total'), 'Value': f'{season["season_rainfall_total"]:.1f} mm' if not pd.isna(season["season_rainfall_total"]) else 'No data'},
+            {'Metric': text(current_lang, 'rainfall_mean'), 'Value': f'{season["season_rainfall_mean"]:.1f} mm' if not pd.isna(season["season_rainfall_mean"]) else 'No data'},
+            {'Metric': text(current_lang, 'extreme_heat_days'), 'Value': f'{season["season_extreme_heat_days"]:.0f}' if not pd.isna(season["season_extreme_heat_days"]) else 'No data'},
+            {'Metric': text(current_lang, 'temp_variability'), 'Value': f'{season["season_temp_std"]:.1f} °C' if not pd.isna(season["season_temp_std"]) else 'No data'},
+        ])
+        st.dataframe(seasonal, hide_index=True, use_container_width=True)
 
     st.markdown('---')
     st.subheader(text(current_lang, 'yield_comparison'))
     comparison = pd.DataFrame({
+        'Scenario': [text(current_lang, 'model_forecast'), text(current_lang, 'regional_baseline')],
         text(current_lang, 'yield_t_ha'): [prediction, 2.4],
-    }, index=[text(current_lang, 'model_forecast'), text(current_lang, 'regional_baseline')])
-    st.bar_chart(comparison, height=300, use_container_width=True)
+    })
+    st.bar_chart(comparison.set_index('Scenario'))
 
     st.caption(text(current_lang, 'caption'))
 
