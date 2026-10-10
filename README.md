@@ -93,10 +93,10 @@ The selected model is a RandomForest regressor trained on cleaned agronomic feat
 
 ## Group Members
 
-- Oli Bakala Beyena, qiyas-2026-005295, Olibekele50@gmail.com
+- Oli Bakala Beyena - qiyas-2026-005295
 
-- Bereket G/Alif, qiyas-2026-004845,  bereketgalif21@gmail.com
+- Bereket G/Alif - qiyas-2026-004845
 
-- Ermiyas Zewdu, qiyas-2026-004085, Ermiyaszewdu266@gmail.com
+- Ermiyas Zewdu - qiyas-2026-004085
 
-- Samuel Kahsay, qiyas-2026-001108, Samuelkahsay76@gmail.com
+- Samuel Kahsay - qiyas-2026-001108
