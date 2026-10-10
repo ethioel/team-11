@@ -8,9 +8,28 @@ import pandas as pd
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parent.parent
-MODEL_PATH = ROOT / 'models' / 'final_model.joblib'
-PRICE_PATH = ROOT / 'data' / 'raw' / 'market_prices.csv'
-WEATHER_PATH = ROOT / 'data' / 'raw' / 'regional_weather.csv'
+ASSETS_DIR = Path(__file__).resolve().parent / 'assets'
+MODEL_PATH = ASSETS_DIR / 'final_model.joblib'
+PRICE_PATH = ASSETS_DIR / 'cleaned_price.csv'
+WEATHER_PATH = ASSETS_DIR / 'cleaned_weather.csv'
+
+# Region aliases for normalizing inconsistent labels found in cleaned assets
+REGION_ALIASES = {
+    'amhara': 'Amhara', 'amh': 'Amhara', 'amhara ': 'Amhara',
+    'oromia': 'Oromia', 'oro': 'Oromia', 'oromia ': 'Oromia',
+    'snnpr': 'SNNPR', 'snnp': 'SNNPR', 'snnp': 'SNNPR', 'snnpr ': 'SNNPR',
+    'somali': 'Somali', 'som': 'Somali', 'somali ': 'Somali',
+    'tigray': 'Tigray', 'tig': 'Tigray', 'tigray ': 'Tigray',
+}
+
+# Crop aliases for normalizing inconsistent labels found in cleaned assets
+CROP_ALIASES = {
+    'barley': 'barley', 'barley ': 'barley',
+    'maize': 'maize', 'maize ': 'maize',
+    'sorghum': 'sorghum', 'sorghum ': 'sorghum',
+    'tef': 'teff', 'teff': 'teff', 'teff ': 'teff',
+    'wheat': 'wheat', 'wheat ': 'wheat',
+}
 
 FEATURE_COLUMNS = [
     'survey_year', 'planting_month', 'altitude_m', 'rainfall_mm_season', 'farm_size_ha',
@@ -52,11 +71,16 @@ T = {
         'caption': 'Values reflect region-season climate patterns and management inputs used by the trained prediction model.',
         'yes': 'Yes',
         'no': 'No',
+        'mean_temp': 'Mean temp',
+        'rainfall_total': 'Rainfall total',
+        'rainfall_mean': 'Rainfall mean',
+        'extreme_heat_days': 'Extreme heat days',
+        'temp_variability': 'Temp variability',
     },
     'am': {
         'language': 'ቋንቋ',
-        'title': '🌱 የምርት ምርት እና ገቢ ተቀያሪ',
-        'subtitle': 'አካባቢያዊ የአየር ንብረት እውቀት ያለው ትንበያ ዳሽቦርድ',
+        'title': '🌱 የምርት ውጤት እና የገቢ እቅድ',
+        'subtitle': 'አካባቢያዊ የአየር ሁኔታ የተመለከተ ትንበያ ዳሽቦርድ',
         'farm_inputs': '🌱 የእርሻ ግብዓቶች',
         'region': 'ክልል',
         'crop_type': 'የእፅዋት ዓይነት',
@@ -66,16 +90,16 @@ T = {
         'farm_size': 'የእርሻ መጠን (ሄክታር)',
         'fertilizer': 'ማዳበሪያ (ኪ.ግ/ሄክታር)',
         'soil_quality': 'የአፈር ጥራት መረጃ',
-        'labor': 'የስራ ቀናት/ሄክታር',
+        'labor': 'የስራ ቀናት/በሄክታር',
         'distance': 'ከገበያ የርቀት (ኪ.ሜ)',
         'improved_seed': 'የማሻሻያ ዘር ጥቅም ላይ ውሏል',
-        'pest_flag': 'በተባይ እና በበሽታ ጉዳት ላይ የሚመለከት',
+        'pest_flag': 'የተባይ እና በሽታ ጉዳት',
         'predicted_yield': 'የተነበበ ምርት',
         'estimated_revenue': 'የተገመተ ገቢ',
         'market_price': 'የገበያ ዋጋ',
         'farm_assumptions': '📋 የእርሻ ግምቶች',
         'season_outlook': '🌦️ የወቅቱ እይታ',
-        'yield_comparison': '📈 የምርት ንጽጽር',
+        'yield_comparison': '📈 የምርት ምዘና',
         'scenario': 'ሁኔታ',
         'model_forecast': 'የሞዴል ትንበያ',
         'regional_baseline': 'የክልል መሠረታዊ እውቀት',
@@ -83,6 +107,11 @@ T = {
         'caption': 'እሴቶቹ በክልል እና በወቅት የአየር ንብረት እና የእርሻ ግብዓቶች ላይ የተመሰረቱ ናቸው።',
         'yes': 'አዎ',
         'no': 'አይ',
+        'mean_temp': 'የበረታዊ ጡና ልምድ',
+        'rainfall_total': 'የጧንታ አነጋገር',
+        'rainfall_mean': 'የጧንታ ቃልል',
+        'extreme_heat_days': 'ከፍተኛ ስንዴ ቀናት',
+        'temp_variability': 'የጡን቞ ሁኔታ',
     },
 }
 
@@ -207,19 +236,7 @@ def normalize_region_name(value):
         return ""
 
     normalized = str(value).strip().lower().replace('-', '').replace('_', '').replace(' ', '')
-    aliases = {
-        'amhara': 'Amhara',
-        'amh': 'Amhara',
-        'oromia': 'Oromia',
-        'oro': 'Oromia',
-        'snnpr': 'SNNPR',
-        'snnp': 'SNNPR',
-        'somali': 'Somali',
-        'som': 'Somali',
-        'tigray': 'Tigray',
-        'tig': 'Tigray',
-    }
-    return aliases.get(normalized, str(value).strip())
+    return REGION_ALIASES.get(normalized, str(value).strip())
 
 
 def normalize_crop_name(value):
@@ -229,29 +246,58 @@ def normalize_crop_name(value):
 
     normalized = str(value).strip().lower().replace('-', '').replace('_', ' ')
     normalized = ' '.join(normalized.split())
-    aliases = {'tef': 'teff', 'teff': 'teff'}
-    return aliases.get(normalized, normalized)
+    return CROP_ALIASES.get(normalized, normalized)
 
 
 def load_data():
-    """Load pricing, weather, and trained model inputs."""
+    """Load pricing, weather, and trained model inputs from assets.
+
+    The cleaned assets may contain inconsistent region/crop labels (e.g. 'SOM', 'AMH', 'ORO', 'TIG').
+    We normalize these on load so downstream lookups work reliably.
+    """
     prices = pd.read_csv(PRICE_PATH)
     weather = pd.read_csv(WEATHER_PATH)
     model = joblib.load(MODEL_PATH)
+
+    # Normalize region labels
+    prices['region'] = prices['region'].map(normalize_region_name)
+    weather['region'] = weather['region'].map(normalize_region_name)
+
+    # Normalize crop labels
+    prices['crop_type'] = prices['crop_type'].map(normalize_crop_name)
+    weather['crop_type'] = weather['crop_type'].map(normalize_crop_name) if 'crop_type' in weather.columns else None
+
+    # Convert month names to integers if needed
+    if weather['month'].dtype == object:
+        month_map = {
+            'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+            'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+        }
+        weather['month'] = weather['month'].map(month_map)
+
+    # Ensure year is integer
+    weather['year'] = weather['year'].astype(int)
+    prices['year'] = prices['year'].astype(int)
+
+    # Drop rows with missing critical values
+    weather = weather.dropna(subset=['region', 'year', 'month'])
+    prices = prices.dropna(subset=['region', 'crop_type', 'year'])
+
     return prices, weather, model
 
 
 def season_features(region, year, planting_month, weather):
     """Return seasonal climate metrics for a region and planting window.
 
+    The growing season is the planting month plus the next three months (4-month window).
     If an exact season match is missing, fall back to nearby regional values rather than
     returning zero or NaN for the whole season. This keeps the dashboard informative and
     prevents the metrics from collapsing to zero for valid user inputs.
     """
     season_months = []
+    season_year = year
     for delta in range(4):
         month = planting_month + delta
-        season_year = year
         while month > 12:
             month -= 12
             season_year += 1
@@ -422,11 +468,11 @@ def main():
     with right:
         st.subheader(text(current_lang, 'season_outlook'))
         seasonal = pd.DataFrame([
-            {'Metric': 'Mean temp', 'Value': f'{season["season_mean_temp"]:.1f} °C' if not pd.isna(season["season_mean_temp"]) else 'No data'},
-            {'Metric': 'Rainfall total', 'Value': f'{season["season_rainfall_total"]:.1f} mm' if not pd.isna(season["season_rainfall_total"]) else 'No data'},
-            {'Metric': 'Rainfall mean', 'Value': f'{season["season_rainfall_mean"]:.1f} mm' if not pd.isna(season["season_rainfall_mean"]) else 'No data'},
-            {'Metric': 'Extreme heat days', 'Value': f'{season["season_extreme_heat_days"]:.0f}' if not pd.isna(season["season_extreme_heat_days"]) else 'No data'},
-            {'Metric': 'Temp variability', 'Value': f'{season["season_temp_std"]:.1f} °C' if not pd.isna(season["season_temp_std"]) else 'No data'},
+            {'Metric': text(current_lang, 'mean_temp'), 'Value': f'{season["season_mean_temp"]:.1f} °C' if not pd.isna(season["season_mean_temp"]) else 'No data'},
+            {'Metric': text(current_lang, 'rainfall_total'), 'Value': f'{season["season_rainfall_total"]:.1f} mm' if not pd.isna(season["season_rainfall_total"]) else 'No data'},
+            {'Metric': text(current_lang, 'rainfall_mean'), 'Value': f'{season["season_rainfall_mean"]:.1f} mm' if not pd.isna(season["season_rainfall_mean"]) else 'No data'},
+            {'Metric': text(current_lang, 'extreme_heat_days'), 'Value': f'{season["season_extreme_heat_days"]:.0f}' if not pd.isna(season["season_extreme_heat_days"]) else 'No data'},
+            {'Metric': text(current_lang, 'temp_variability'), 'Value': f'{season["season_temp_std"]:.1f} °C' if not pd.isna(season["season_temp_std"]) else 'No data'},
         ])
         st.dataframe(seasonal, hide_index=True, use_container_width=True)
 
@@ -434,7 +480,7 @@ def main():
     st.subheader(text(current_lang, 'yield_comparison'))
     comparison = pd.DataFrame({
         'Scenario': [text(current_lang, 'model_forecast'), text(current_lang, 'regional_baseline')],
-        'Yield (t/ha)': [prediction, 2.4],
+        text(current_lang, 'yield_t_ha'): [prediction, 2.4],
     })
     st.bar_chart(comparison.set_index('Scenario'))
 
