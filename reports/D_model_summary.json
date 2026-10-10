@@ -1,7 +1,7 @@
 {
-  "validation_rmse": 0.5375631325065366,
-  "validation_mae": 0.3949961002740589,
-  "validation_r2": 0.8552587025089208,
+  "validation_rmse": 0.45994723781149677,
+  "validation_mae": 0.3368039191139738,
+  "validation_r2": 0.8940381481833506,
   "cv_rmse_mean": 0.5575919245640739,
   "cv_rmse_std": 0.004612863094440811
 }
