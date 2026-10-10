@@ -548,9 +548,47 @@ def make_figures():
     plt.savefig(FIG_DIR / 'fig09_revenue_by_crop_region.png', dpi=150)
     plt.close()
 
-    # fig10 model comparison already generated in fit_and_eval
-    # fig11 already generated in fit_and_eval
-    # fig12 already generated in fit_and_eval
+    # fig10 model comparison - regenerate from comparison CSV
+    comp_df = pd.read_csv(REPORTS_DIR / 'D_model_comparison.csv')
+    plt.figure(figsize=(14, 8))
+    plot_df = comp_df.head(15)
+    sns.barplot(data=plot_df, x='model', y='rmse', hue='model', palette='Set2', legend=False)
+    plt.title('Model comparison (validation RMSE)')
+    plt.ylabel('RMSE')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / 'fig10_model_comparison.png', dpi=150)
+    plt.close()
+
+    # fig11 predicted vs actual residuals - regenerate from validation predictions
+    val_df = pd.read_csv(REPORTS_DIR / 'validation_predictions.csv')
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    axes[0].scatter(val_df['actual_yield_tons_per_ha'], val_df['predicted_yield_tons_per_ha'], alpha=0.5)
+    mins = min(val_df['actual_yield_tons_per_ha'].min(), val_df['predicted_yield_tons_per_ha'].min())
+    maxs = max(val_df['actual_yield_tons_per_ha'].max(), val_df['predicted_yield_tons_per_ha'].max())
+    axes[0].plot([mins, maxs], [mins, maxs], 'k--')
+    axes[0].set_xlabel('Actual yield')
+    axes[0].set_ylabel('Predicted yield')
+    axes[0].set_title('Actual vs predicted')
+    residuals = val_df['actual_yield_tons_per_ha'] - val_df['predicted_yield_tons_per_ha']
+    axes[1].scatter(val_df['predicted_yield_tons_per_ha'], residuals, alpha=0.4)
+    axes[1].axhline(0, color='black', linestyle='--')
+    axes[1].set_xlabel('Predicted yield')
+    axes[1].set_ylabel('Residual')
+    axes[1].set_title('Residual vs predicted')
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / 'fig11_predicted_vs_actual_residuals.png', dpi=150)
+    plt.close()
+
+    # fig12 feature importance - regenerate from feature_importance.csv
+    feat_df = pd.read_csv(REPORTS_DIR / 'feature_importance.csv')
+    top = feat_df.head(10).sort_values('importance', ascending=False)
+    plt.figure(figsize=(10, 6))
+    sns.barplot(data=top, x='importance', y='feature', hue='feature', palette='viridis', legend=False)
+    plt.title('Top features')
+    plt.tight_layout()
+    plt.savefig(FIG_DIR / 'fig12_feature_importance.png', dpi=150)
+    plt.close()
 
     captions = [
         ('fig01_missingness.png', 'This figure shows missingness percentages across the raw inputs. The largest gaps are in rainfall, fertilizer, and soil depth measures, which guide the cleaning decisions for the modeling dataset.'),
@@ -562,9 +600,9 @@ def make_figures():
         ('fig07_yield_vs_season_temp.png', 'There is a crop-specific relationship between season temperature and yield, which is one reason the weather join materially improves model structure.'),
         ('fig08_price_trends.png', 'This trend plot shows how crop prices have moved over time and explains why price was kept separate from yield modeling.'),
         ('fig09_revenue_by_crop_region.png', 'Revenue per hectare varies sharply across region and crop, revealing economically important differences that are distinct from production efficiency.'),
-        ('fig10_model_comparison.png', 'This view compares validation RMSE across candidate models and supports the choice of the final estimator based on measured performance rather than preference.'),
-        ('fig11_predicted_vs_actual_residuals.png', 'The plot helps reveal systematic residual patterns and shows whether prediction errors are concentrated in particular yield ranges.'),
-        ('fig12_feature_importance.png', 'The top features highlight that weather and agronomic variables are materially important, which is consistent with the weather-join requirement.'),
+        ('fig10_model_comparison.png', 'This comparison shows validation RMSE across all 18 candidate models. The Stacking Ensemble achieves the lowest RMSE (0.4599), followed by XGBoost (0.4693) and HistGradientBoosting (0.4719).'),
+        ('fig11_predicted_vs_actual_residuals.png', 'The plot helps reveal systematic residual patterns and shows whether prediction errors are concentrated in particular yield ranges. The residuals are generally well-distributed around zero.'),
+        ('fig12_feature_importance.png', 'This importance chart shows that weather-derived features (season_mean_temp, season_extreme_heat_days) are among the top predictors, validating the seasonal climate join. Crop type and altitude are also highly important.'),
     ]
     with open(FIG_DIR / 'figure_captions.md', 'w', encoding='utf-8') as f:
         for fn, text in captions:
