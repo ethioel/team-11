@@ -17,7 +17,7 @@ yield_tons_per_ha,float64,processed feature table,yield_tons_per_ha,engineered o
 season_mean_temp,float64,processed feature table,season_mean_temp,engineered or source feature
 season_rainfall_total,float64,processed feature table,season_rainfall_total,engineered or source feature
 season_rainfall_mean,float64,processed feature table,season_rainfall_mean,engineered or source feature
-season_extreme_heat_days,int64,processed feature table,season_extreme_heat_days,engineered or source feature
+season_extreme_heat_days,float64,processed feature table,season_extreme_heat_days,engineered or source feature
 season_temp_std,float64,processed feature table,season_temp_std,engineered or source feature
 missing_season_months,int64,processed feature table,missing_season_months,engineered or source feature
 fertilizer_per_labor_day,float64,processed feature table,fertilizer_per_labor_day,engineered or source feature
