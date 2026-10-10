@@ -482,19 +482,6 @@ def main():
         seasonal_df = pd.DataFrame(seasonal_data).drop(columns=['raw'])
         st.dataframe(seasonal_df, hide_index=True, use_container_width=True)
 
-        if season["season_mean_temp"] > 0:
-            import plotly.graph_objects as go
-            fig = go.Figure()
-            fig.add_trace(go.Indicator(
-                mode="gauge+number",
-                value=season["season_mean_temp"],
-                title={'text': "🌡️ Mean Season Temp"},
-                gauge={'axis': {'range': [0, 40]},
-                       'bar': {'color': "#0f766e"},
-                       'bgcolor': "white"},
-                number={'suffix': "°C"}))
-            st.plotly_chart(fig, use_container_width=True)
-
     st.markdown('---')
     st.subheader(text(current_lang, 'yield_comparison'))
     comparison = pd.DataFrame({
