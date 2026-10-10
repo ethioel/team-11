@@ -11,13 +11,31 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor, RandomForestRegressor, GradientBoostingRegressor, StackingRegressor, IsolationForest
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge, SGDRegressor, ElasticNet, Lasso
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import KFold, RandomizedSearchCV, cross_val_score, train_test_split
+from sklearn.model_selection import KFold, RandomizedSearchCV, cross_val_score, train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, PolynomialFeatures, QuantileTransformer, RobustScaler
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, Matern
+
+try:
+    import xgboost as xgb
+    HAS_XGB = True
+except ImportError:
+    HAS_XGB = False
+
+try:
+    import lightgbm as lgb
+    HAS_LGB = True
+except ImportError:
+    HAS_LGB = False
 
 from cleaning import build_cleaning_log, clean_market_price, clean_plot_data, clean_weather_data
 from features import add_weather_features, attach_price_analysis, build_feature_columns, make_data_dictionary
@@ -139,8 +157,14 @@ def build_preprocessor(X_train):
     ]
     cat_cols = ['region', 'crop_type']
     preprocessor = ColumnTransformer([
-        ('num', Pipeline([('imputer', SimpleImputer(strategy='median'))]), [c for c in numeric_cols if c in X_train.columns]),
-        ('cat', Pipeline([('imputer', SimpleImputer(strategy='most_frequent')), ('onehot', OneHotEncoder(handle_unknown='ignore'))]), [c for c in cat_cols if c in X_train.columns]),
+        ('num', Pipeline([
+            ('imputer', SimpleImputer(strategy='median')),
+            ('scaler', StandardScaler()),
+        ]), [c for c in numeric_cols if c in X_train.columns]),
+        ('cat', Pipeline([
+            ('imputer', SimpleImputer(strategy='most_frequent')),
+            ('onehot', OneHotEncoder(handle_unknown='ignore')),
+        ]), [c for c in cat_cols if c in X_train.columns]),
     ])
     return preprocessor
 
@@ -164,9 +188,57 @@ def fit_and_eval():
 
     models = {
         'mean_baseline': None,
+        'ridge': Ridge(alpha=1.0),
         'linear_regression': LinearRegression(),
-        'random_forest': RandomForestRegressor(random_state=42, n_estimators=150, max_depth=12, n_jobs=-1, min_samples_leaf=1),
+        'lasso': Lasso(alpha=0.01, max_iter=5000),
+        'elastic_net': ElasticNet(alpha=0.01, l1_ratio=0.5, max_iter=5000),
+        'sgd': SGDRegressor(max_iter=1000, random_state=42),
+        'knn': KNeighborsRegressor(n_neighbors=5),
+        'decision_tree': DecisionTreeRegressor(random_state=42, max_depth=8),
+        'random_forest': RandomForestRegressor(random_state=42, n_estimators=300, max_depth=12, n_jobs=-1, min_samples_leaf=1),
+        'extra_trees': ExtraTreesRegressor(random_state=42, n_estimators=500, n_jobs=-1),
+        'hist_gradient_boosting': HistGradientBoostingRegressor(random_state=42, max_depth=12, learning_rate=0.05, max_iter=500),
+        'gradient_boosting': GradientBoostingRegressor(random_state=42, n_estimators=200, max_depth=5, learning_rate=0.05),
+        'mlp_neural_net': MLPRegressor(
+            hidden_layer_sizes=(128, 64),
+            activation='relu',
+            alpha=1e-4,
+            learning_rate_init=1e-3,
+            max_iter=1200,
+            random_state=42,
+            early_stopping=True,
+        ),
+        'svr': SVR(kernel='rbf', C=1.0, epsilon=0.05, gamma='scale'),
     }
+    if HAS_XGB:
+        models['xgboost'] = xgb.XGBRegressor(
+            n_estimators=300, max_depth=6, learning_rate=0.05,
+            random_state=42, n_jobs=-1, tree_method='hist',
+        )
+    if HAS_LGB:
+        models['lightgbm'] = lgb.LGBMRegressor(
+            n_estimators=300, max_depth=6, learning_rate=0.05,
+            random_state=42, n_jobs=-1, verbose=-1,
+        )
+
+    # Stacking ensemble using the best models
+    base_estimators = [
+        ('rf', RandomForestRegressor(random_state=42, n_estimators=300, max_depth=12, n_jobs=-1, min_samples_leaf=1)),
+        ('hgb', HistGradientBoostingRegressor(random_state=42, max_depth=12, learning_rate=0.05, max_iter=500)),
+        ('et', ExtraTreesRegressor(random_state=42, n_estimators=500, n_jobs=-1)),
+    ]
+    if HAS_XGB:
+        base_estimators.append(('xgb', xgb.XGBRegressor(n_estimators=300, max_depth=6, learning_rate=0.05, random_state=42, n_jobs=-1, tree_method='hist')))
+    if HAS_LGB:
+        base_estimators.append(('lgb', lgb.LGBMRegressor(n_estimators=300, max_depth=6, learning_rate=0.05, random_state=42, n_jobs=-1, verbose=-1)))
+
+    stacking = StackingRegressor(
+        estimators=base_estimators,
+        final_estimator=Ridge(alpha=1.0),
+        cv=5,
+        n_jobs=-1,
+    )
+    models['stacking_ensemble'] = stacking
 
     results = []
     for name, model in models.items():
@@ -180,17 +252,25 @@ def fit_and_eval():
         pred = pipe.predict(X_val)
         results.append({'model': name, **metrics_from_predictions(y_val, pred)})
 
-    comparison = pd.DataFrame(results)
+    comparison = pd.DataFrame(results).sort_values('rmse', ascending=True).reset_index(drop=True)
     comparison.to_csv(REPORTS_DIR / 'D_model_comparison.csv', index=False)
 
-    base_rf = RandomForestRegressor(random_state=42, n_estimators=150, max_depth=12, n_jobs=-1, min_samples_leaf=1)
-    base_pipe = Pipeline([('prep', preprocessor), ('model', base_rf)])
-    base_pipe.fit(X_train, y_train)
-    val_pred = base_pipe.predict(X_val)
+    best_name = comparison.iloc[0]['model']
+    best_metrics = comparison.iloc[0].to_dict()
+    best_model = None
+    for name, model in models.items():
+        if name == best_name:
+            best_model = Pipeline([('prep', preprocessor), ('model', model)])
+            best_model.fit(X_train, y_train)
+            break
+
+    val_pred = best_model.predict(X_val)
     val_metrics = metrics_from_predictions(y_val, val_pred)
 
     rf_cv = KFold(n_splits=5, shuffle=True, random_state=42)
-    rf_cv_scores = cross_val_score(base_pipe, X, y, cv=rf_cv, scoring='neg_root_mean_squared_error', n_jobs=-1)
+    cv_model = RandomForestRegressor(random_state=42, n_estimators=300, max_depth=12, n_jobs=-1, min_samples_leaf=1)
+    cv_pipeline = Pipeline([('prep', preprocessor), ('model', cv_model)])
+    rf_cv_scores = cross_val_score(cv_pipeline, X, y, cv=rf_cv, scoring='neg_root_mean_squared_error', n_jobs=-1)
     cv_rmse_mean = float(-rf_cv_scores.mean())
     cv_rmse_std = float(rf_cv_scores.std())
 
@@ -227,7 +307,7 @@ def fit_and_eval():
     search = RandomizedSearchCV(
         tuned_pipe,
         param_distributions=param_dist,
-        n_iter=15,
+        n_iter=10,
         cv=5,
         scoring='neg_root_mean_squared_error',
         random_state=42,
@@ -237,10 +317,33 @@ def fit_and_eval():
     tuned_pred = search.best_estimator_.predict(X_val)
     tuned_metrics = metrics_from_predictions(y_val, tuned_pred)
 
-    final_pipe = search.best_estimator_
+    final_pipe = best_model
     joblib.dump(final_pipe, MODELS_DIR / 'final_model.joblib')
 
+    model_results = comparison.copy()
+    model_results['rank'] = np.arange(1, len(model_results) + 1)
+    model_results.to_csv(REPORTS_DIR / 'model_results.csv', index=False)
+
+    validation_predictions = pd.DataFrame({
+        'plot_id': X_val.index.map(lambda idx: train_df.loc[idx, 'plot_id']),
+        'actual_yield_tons_per_ha': y_val.values,
+        'predicted_yield_tons_per_ha': val_pred,
+        'abs_error': np.abs(y_val.values - val_pred),
+    })
+    validation_predictions.to_csv(REPORTS_DIR / 'validation_predictions.csv', index=False)
+
+    if hasattr(final_pipe.named_steps['model'], 'feature_importances_'):
+        feature_names = final_pipe.named_steps['prep'].get_feature_names_out()
+        importances = final_pipe.named_steps['model'].feature_importances_
+        feature_importance = pd.DataFrame({'feature': feature_names, 'importance': importances}).sort_values('importance', ascending=False)
+        feature_importance.to_csv(REPORTS_DIR / 'feature_importance.csv', index=False)
+    else:
+        feature_importance = pd.DataFrame({'feature': [], 'importance': []})
+        feature_importance.to_csv(REPORTS_DIR / 'feature_importance.csv', index=False)
+
+    mean_baseline_row = next((r for r in results if r['model'] == 'mean_baseline'), None)
     report = {
+        'best_model': best_name,
         'validation_rmse': float(val_metrics['rmse']),
         'validation_mae': float(val_metrics['mae']),
         'validation_r2': float(val_metrics['r2']),
@@ -255,10 +358,10 @@ def fit_and_eval():
         'tuned_rmse': float(tuned_metrics['rmse']),
         'tuned_mae': float(tuned_metrics['mae']),
         'tuned_r2': float(tuned_metrics['r2']),
-        'best_params': search.best_params_,
-        'baseline_rmse': float(results[2]['rmse']) if len(results) > 2 else float(val_metrics['rmse']),
-        'baseline_mae': float(results[2]['mae']) if len(results) > 2 else float(val_metrics['mae']),
-        'baseline_r2': float(results[2]['r2']) if len(results) > 2 else float(val_metrics['r2']),
+        'best_params': getattr(search.best_estimator_.named_steps['model'], 'get_params', lambda: {})(),
+        'baseline_rmse': float(mean_baseline_row['rmse']) if mean_baseline_row is not None else float(val_metrics['rmse']),
+        'baseline_mae': float(mean_baseline_row['mae']) if mean_baseline_row is not None else float(val_metrics['mae']),
+        'baseline_r2': float(mean_baseline_row['r2']) if mean_baseline_row is not None else float(val_metrics['r2']),
     }
     with open(REPORTS_DIR / 'D_model_summary.json', 'w') as f:
         json.dump(report, f, indent=2)
