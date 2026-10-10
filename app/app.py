@@ -500,6 +500,197 @@ def main():
 
     st.caption(text(current_lang, 'caption'))
 
+    # Professional data analysis features
+    with st.expander("🔍 Pro Analysis: Yield Insights", expanded=False):
+        # Load training data for comparison
+        train_df = load_analytics()
+        
+        # Create tabs for different analyses
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "Yield Distribution", 
+            "Regional Comparison", 
+            "Feature Impact", 
+            "Price Analysis"
+        ])
+        
+        with tab1:
+            st.subheader("Yield Distribution Analysis")
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+            
+            # Distribution plot
+            sns.histplot(data=train_df, x='yield_tons_per_ha', bins=30, kde=True, ax=ax1, color='steelblue')
+            ax1.axvline(prediction, color='red', linestyle='--', linewidth=2, label='Your Prediction')
+            ax1.axvline(train_df['yield_tons_per_ha'].mean(), color='green', linestyle='-', linewidth=2, label='Dataset Mean')
+            ax1.set_xlabel('Yield (tons/ha)')
+            ax1.set_ylabel('Frequency')
+            ax1.set_title('Yield Distribution with Your Prediction')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
+            
+            # Box plot by crop type
+            sns.boxplot(data=train_df, x='crop_type', y='yield_tons_per_ha', ax=ax2, palette='Set2')
+            ax2.scatter([0,1,2,3,4], [prediction]*5, color='red', s=100, zorder=5, label='Your Prediction')
+            ax2.set_xlabel('Crop Type')
+            ax2.set_ylabel('Yield (tons/ha)')
+            ax2.set_title('Yield by Crop Type')
+            ax2.legend()
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Statistics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Dataset Mean", f"{train_df['yield_tons_per_ha'].mean():.2f} t/ha")
+            with col2:
+                st.metric("Dataset Median", f"{train_df['yield_tons_per_ha'].median():.2f} t/ha")
+            with col3:
+                st.metric("Your Prediction", f"{prediction:.2f} t/ha")
+            with col4:
+                percentile = (train_df['yield_tons_per_ha'] < prediction).mean() * 100
+                st.metric("Percentile Rank", f"{percentile:.0f}%")
+        
+        with tab2:
+            st.subheader("Regional Performance Analysis")
+            regional_stats = train_df.groupby('region')['yield_tons_per_ha'].agg(['mean', 'std', 'count']).round(2)
+            regional_stats.columns = ['Mean Yield', 'Std Dev', 'Sample Size']
+            regional_stats['Your Prediction'] = prediction
+            regional_stats['vs Regional Mean (%)'] = ((prediction - regional_stats['Mean Yield']) / regional_stats['Mean Yield'] * 100).round(1)
+            
+            st.dataframe(regional_stats, use_container_width=True)
+            
+            # Bar chart
+            fig, ax = plt.subplots(figsize=(10, 5))
+            regional_stats['Mean Yield'].plot(kind='bar', ax=ax, color='skyblue', edgecolor='navy')
+            ax.axhline(y=prediction, color='red', linestyle='--', linewidth=2, label='Your Prediction')
+            ax.set_ylabel('Yield (tons/ha)')
+            ax.set_title('Average Yield by Region')
+            ax.legend()
+            plt.xticks(rotation=0)
+            plt.tight_layout()
+            st.pyplot(fig)
+        
+        with tab3:
+            st.subheader("Feature Impact Analysis")
+            # Show how key features affect yield
+            feature_cols = ['season_mean_temp', 'season_rainfall_total', 'fertilizer_kg_per_ha', 'farm_size_ha']
+            
+            fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+            axes = axes.flatten()
+            
+            for i, feature in enumerate(feature_cols):
+                if feature in train_df.columns:
+                    # Scatter plot with trend
+                    axes[i].scatter(train_df[feature], train_df['yield_tons_per_ha'], alpha=0.5, s=10)
+                    
+                    # Add trend line
+                    z = np.polyfit(train_df[feature], train_df['yield_tons_per_ha'], 1)
+                    p = np.poly1d(z)
+                    x_range = np.linspace(train_df[feature].min(), train_df[feature].max(), 100)
+                    axes[i].plot(x_range, p(x_range), "r--", alpha=0.8, linewidth=2)
+                    
+                    # Mark current values
+                    current_vals = {
+                        'season_mean_temp': season['season_mean_temp'],
+                        'season_rainfall_total': season['season_rainfall_total'],
+                        'fertilizer_kg_per_ha': fertilizer,
+                        'farm_size_ha': farm_size
+                    }
+                    if feature in current_vals:
+                        axes[i].axvline(current_vals[feature], color='red', linestyle='-', linewidth=2, label='Your Value')
+                    
+                    axes[i].set_xlabel(feature.replace('_', ' ').title())
+                    axes[i].set_ylabel('Yield (tons/ha)')
+                    axes[i].grid(True, alpha=0.3)
+                    axes[i].legend()
+            
+            plt.suptitle('Feature Impact on Yield (with Trend Lines)', fontsize=14)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Correlation table
+            st.subheader("Feature Correlations with Yield")
+            corr_features = feature_cols + ['yield_tons_per_ha']
+            corr_matrix = train_df[corr_features].corr()['yield_tons_per_ha'].drop('yield_tons_per_ha')
+            corr_df = pd.DataFrame({
+                'Feature': corr_matrix.index,
+                'Correlation with Yield': corr_matrix.values.round(3)
+            }).sort_values('Correlation with Yield', key=abs, ascending=False)
+            
+            st.dataframe(corr_df, use_container_width=True, hide_index=True)
+        
+        with tab4:
+            st.subheader("Market Price Analysis")
+            
+            # Load price data for trends
+            price_data = pd.read_csv(PRICE_PATH)
+            price_data = price_data[price_data['price_birr_per_quintal'].notna()]
+            
+            # Price trends by crop
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+            
+            # Line plot of price trends
+            for crop_type in price_data['crop_type'].unique():
+                crop_data = price_data[price_data['crop_type'] == crop_type].sort_values('year')
+                ax1.plot(crop_data['year'], crop_data['price_birr_per_quintal'], 
+                        marker='o', label=crop_type, linewidth=2)
+            
+            ax1.set_xlabel('Year')
+            ax1.set_ylabel('Price (birr/quintal)')
+            ax1.set_title('Price Trends by Crop Type')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
+            
+            # Current price comparison
+            current_crop_price = price_data[
+                (price_data['region'] == region) & 
+                (price_data['crop_type'] == crop) & 
+                (price_data['year'] == survey_year)
+            ]['price_birr_per_quintal'].mean()
+            
+            if pd.isna(current_crop_price):
+                # Fallback to regional average
+                regional_price = price_data[
+                    (price_data['region'] == region) & 
+                    (price_data['crop_type'] == crop)
+                ]['price_birr_per_quintal'].mean()
+                if pd.isna(regional_price):
+                    # Fallback to crop average
+                    regional_price = price_data[
+                        price_data['crop_type'] == crop
+                    ]['price_birr_per_quintal'].mean()
+            
+            crop_avg_price = price_data[price_data['crop_type'] == crop]['price_birr_per_quintal'].mean()
+            overall_avg = price_data['price_birr_per_quintal'].mean()
+            
+            price_comparison = pd.DataFrame({
+                'Price Type': ['Current (Your Selection)', f'{crop} Average', 'Overall Average'],
+                'Price (birr/quintal)': [
+                    price_value if not pd.isna(price_value) else 0,
+                    crop_avg_price if not pd.isna(crop_avg_price) else 0,
+                    overall_avg if not pd.isna(overall_avg) else 0
+                ]
+            })
+            
+            ax2.bar(price_comparison['Price Type'], price_comparison['Price (birr/quintal)'], 
+                   color=['red', 'blue', 'gray'], alpha=0.7)
+            ax2.set_ylabel('Price (birr/quintal)')
+            ax2.set_title('Price Comparison')
+            ax2.tick_params(axis='x', rotation=15)
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Price statistics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Current Price", f"{price_value:.0f} birr/quintal")
+            with col2:
+                st.metric(f"{crop.title()} Avg", f"{crop_avg_price:.0f} birr/quintal")
+            with col3:
+                st.metric("Market Avg", f"{overall_avg:.0f} birr/quintal")
+
+
 
 if __name__ == '__main__':
     main()
