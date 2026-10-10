@@ -15,8 +15,8 @@ MODEL_PATH = ROOT / 'models' / 'final_model.joblib'
 
 
 def load_inputs():
-    train_df = pd.read_csv(DATA_DIR / 'crop_yield_train.csv')
-    test_df = pd.read_csv(DATA_DIR / 'crop_yield_leaderboard_test.csv')
+    train_df = pd.read_csv(RAW_DIR / 'crop_yield_train.csv')
+    test_df = pd.read_csv(RAW_DIR / 'crop_yield_leaderboard_test.csv')
     weather_df = pd.read_csv(RAW_DIR / 'regional_weather.csv')
     price_df = pd.read_csv(RAW_DIR / 'market_prices.csv')
     clean_train, clean_test, _ = clean_plot_data(train_df, test_df)
@@ -41,7 +41,7 @@ def predict_submission():
     X = test_df[feature_cols].copy()
     pred = model.predict(X)
     out = pd.DataFrame({'plot_id': test_df['plot_id'], 'predicted_yield_tons_per_ha': pred})
-    out.to_csv(ROOT / 'submission' / 'team_beso_submission.csv', index=False)
+    out.to_csv(ROOT / 'submission' / 'team_11_submission.csv', index=False)
     print(out.head())
     print('rows', len(out))
 
