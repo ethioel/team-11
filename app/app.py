@@ -6,6 +6,12 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+
+# Suppress sklearn version mismatch warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='sklearn.base')
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIR = Path(__file__).resolve().parent / 'assets'
@@ -92,14 +98,14 @@ T = {
         'region': 'ክልል',
         'crop_type': 'የእፅዋት ዓይነት',
         'survey_year': 'የጥናት ዓመት',
-        'planting_month': 'የመዝራት ወር',
+        'planting_month': 'የተዘራበት ወር',
         'altitude': 'ከፍታ (ሜትር)',
-        'farm_size': 'የእርሻ መጠን (ሄክታር)',
+        'farm_size': 'የእርሻ መሬት ስፋት (ሄክታር)',
         'fertilizer': 'ማዳበሪያ (ኪ.ግ/ሄክታር)',
         'soil_quality': 'የአፈር ጥራት መረጃ',
         'labor': 'የስራ ቀናት/በሄክታር',
         'distance': 'ከገበያ የርቀት (ኪ.ሜ)',
-        'improved_seed': 'የማሻሻያ ዘር ጥቅም ላይ ውሏል',
+        'improved_seed': 'ምርጥ ዘር ጥቅም ላይ ውሏል',
         'pest_flag': 'የተባይ እና በሽታ ጉዳት',
         'predicted_yield': 'የተነበበ ምርት',
         'estimated_revenue': 'የተገመተ ገቢ',
@@ -114,11 +120,11 @@ T = {
         'caption': 'እሴቶቹ በክልል እና በወቅት የአየር ንብረት እና የእርሻ ግብዓቶች ላይ የተመሰረቱ ናቸው።',
         'yes': 'አዎ',
         'no': 'አይ',
-        'mean_temp': 'የበረታዊ ጡና ልምድ',
-        'rainfall_total': 'የጧንታ አነጋገር',
-        'rainfall_mean': 'የጧንታ ቃልል',
-        'extreme_heat_days': 'ከፍተኛ ስንዴ ቀናት',
-        'temp_variability': 'የጡን቞ ሁኔታ',
+        'mean_temp': 'አማካይ የአየር ጠባይ መጠን',
+        'rainfall_total': 'ጠቅላላ የዝናብ መጠን',
+        'rainfall_mean': 'አማካይ የዝናብ መጠን',
+        'extreme_heat_days': 'ከፍተኛ ሙቀት ቀናት',
+        'temp_variability': 'የአየር ጠባይ ልዩነት',
     },
 }
 
@@ -404,12 +410,12 @@ def main():
         planting_month = st.selectbox(text(current_lang, 'planting_month'), list(range(1, 13)), index=6)
 
         st.markdown('<div style="height: 12px"></div>', unsafe_allow_html=True)
-        altitude = st.number_input(text(current_lang, 'altitude'), value=2000.0, min_value=0.0, step=50.0)
-        farm_size = st.number_input(text(current_lang, 'farm_size'), value=1.0, min_value=0.01, step=0.1)
-        fertilizer = st.number_input(text(current_lang, 'fertilizer'), value=30.0, min_value=0.0, step=5.0)
-        soil_quality = st.number_input(text(current_lang, 'soil_quality'), value=0.5, min_value=0.0, max_value=1.0, step=0.05)
-        labor = st.number_input(text(current_lang, 'labor'), value=40.0, min_value=0.0, step=5.0)
-        distance = st.number_input(text(current_lang, 'distance'), value=12.0, min_value=0.0, step=1.0)
+        altitude = st.slider(text(current_lang, 'altitude'), min_value=0.0, max_value=4000.0, value=2000.0, step=50.0, help='Altitude above sea level in meters')
+        farm_size = st.slider(text(current_lang, 'farm_size'), min_value=0.1, max_value=10.0, value=1.0, step=0.1, help='Total farm area in hectares')
+        fertilizer = st.slider(text(current_lang, 'fertilizer'), min_value=0.0, max_value=200.0, value=30.0, step=5.0, help='Fertilizer applied per hectare')
+        soil_quality = st.slider(text(current_lang, 'soil_quality'), min_value=0.0, max_value=1.0, value=0.5, step=0.05, help='Soil quality index (0=poor, 1=excellent)')
+        labor = st.slider(text(current_lang, 'labor'), min_value=0.0, max_value=200.0, value=40.0, step=5.0, help='Labor days per hectare')
+        distance = st.slider(text(current_lang, 'distance'), min_value=0.0, max_value=100.0, value=12.0, step=1.0, help='Distance to nearest market in km')
         improved_seed = st.selectbox(text(current_lang, 'improved_seed'), [0, 1])
         pest_flag = st.selectbox(text(current_lang, 'pest_flag'), [0, 1])
 
@@ -477,7 +483,7 @@ def main():
             {'Metric': text(current_lang, 'soil_quality'), 'Value': f'{soil_quality:.2f}'},
             {'Metric': text(current_lang, 'improved_seed'), 'Value': text(current_lang, 'yes') if improved_seed else text(current_lang, 'no')},
         ])
-        st.dataframe(summary, hide_index=True, use_container_width=True)
+        st.dataframe(summary, hide_index=True, width='stretch')
 
     with right:
         st.subheader(text(current_lang, 'season_outlook'))
@@ -488,7 +494,7 @@ def main():
             {'Metric': text(current_lang, 'extreme_heat_days'), 'Value': f'{season["season_extreme_heat_days"]:.0f}' if not pd.isna(season["season_extreme_heat_days"]) else 'No data'},
             {'Metric': text(current_lang, 'temp_variability'), 'Value': f'{season["season_temp_std"]:.1f} °C' if not pd.isna(season["season_temp_std"]) else 'No data'},
         ])
-        st.dataframe(seasonal, hide_index=True, use_container_width=True)
+        st.dataframe(seasonal, hide_index=True, width='stretch')
 
     st.markdown('---')
     st.subheader(text(current_lang, 'yield_comparison'))
@@ -557,7 +563,7 @@ def main():
             regional_stats['Your Prediction'] = prediction
             regional_stats['vs Regional Mean (%)'] = ((prediction - regional_stats['Mean Yield']) / regional_stats['Mean Yield'] * 100).round(1)
             
-            st.dataframe(regional_stats, use_container_width=True)
+            st.dataframe(regional_stats, width='stretch')
             
             # Bar chart
             fig, ax = plt.subplots(figsize=(10, 5))
@@ -613,11 +619,11 @@ def main():
             corr_features = feature_cols + ['yield_tons_per_ha']
             corr_matrix = train_df[corr_features].corr()['yield_tons_per_ha'].drop('yield_tons_per_ha')
             corr_df = pd.DataFrame({
-                'Feature': corr_matrix.index,
-                'Correlation with Yield': corr_matrix.values.round(3)
+                'Feature': corr_matrix.index.astype(str),
+                'Correlation with Yield': corr_matrix.values.round(3).astype(float)
             }).sort_values('Correlation with Yield', key=abs, ascending=False)
             
-            st.dataframe(corr_df, use_container_width=True, hide_index=True)
+            st.dataframe(corr_df, width='stretch', hide_index=True)
         
         with tab4:
             st.subheader("Market Price Analysis")
