@@ -261,13 +261,16 @@ st.markdown(
         box-shadow: 0 0 0 3px var(--accent);
     }
     /* Slider value labels (min/max numbers) - hide for clean look */
-    .stSlider [data-baseweb="slider"] .stSliderLabel,
-    .stSlider .stSliderLabel {
+    .stSlider [data-baseweb="slider"] .stSliderValue,
+    .stSlider [data-baseweb="slider"] [class*="Value"],
+    .stSlider [data-baseweb="slider"] span,
+    .stSlider > div > div:last-child {
         display: none !important;
     }
-    /* Ensure value label is visible when shown */
-    .stSlider [data-baseweb="slider"] > div > div > div {
-        color: var(--on-primary) !important;
+    /* Ensure the actual slider thumb and track remain visible */
+    .stSlider [role="slider"] {
+        display: block !important;
+        visibility: visible !important;
     }
     /* Override sidebar slider background to match sidebar dark color */
     [data-testid="stSidebar"] .stSlider > div > div {
