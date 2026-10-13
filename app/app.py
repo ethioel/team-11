@@ -241,6 +241,32 @@ st.markdown(
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
         color: var(--on-primary) !important;
     }
+    /* Slider/Seekbar styling for both sidebar and main content */
+    .stSlider [data-baseweb="slider"] {
+        background-color: var(--surface-variant);
+    }
+    .stSlider [data-baseweb="slider"] > div:first-child {
+        background-color: var(--secondary);
+    }
+    .stSlider [role="slider"] {
+        background-color: var(--secondary) !important;
+        border: 2px solid var(--surface);
+        box-shadow: 0 2px 6px var(--shadow);
+    }
+    .stSlider [role="slider"]:focus {
+        box-shadow: 0 0 0 3px var(--accent);
+    }
+    /* Sidebar slider specific */
+    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
+        background-color: var(--surface-variant);
+    }
+    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] > div:first-child {
+        background-color: var(--secondary);
+    }
+    [data-testid="stSidebar"] .stSlider [role="slider"] {
+        background-color: var(--secondary) !important;
+        border: 2px solid var(--surface);
+    }
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
@@ -614,28 +640,28 @@ def main():
     yields = [prediction, 2.4]
     
     # Create bars with gradient colors
-    bars = ax.bar(scenarios, yields, color=[var('--secondary'), var(--surface-variant)], 
-                  edgecolor=['var(--primary)', var(--primary)], linewidth=2)
+    bars = ax.bar(scenarios, yields, color=['#14b8a6', '#eef8ff'], 
+                  edgecolor=['#103a52', '#103a52'], linewidth=2)
     
     # Customize chart
-    ax.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color=var(--on-surface))
-    ax.set_title(text(current_lang, 'yield_comparison'), fontweight='700', color=var(--primary), pad=20)
-    ax.grid(True, alpha=0.3, linestyle='--', color=var(--border))
+    ax.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color='#102a43')
+    ax.set_title(text(current_lang, 'yield_comparison'), fontweight='700', color='#103a52', pad=20)
+    ax.grid(True, alpha=0.3, linestyle='--', color='rgba(32, 117, 90, 0.12)')
     
     # Add value labels on bars
     for bar, yield_val in zip(bars, yields):
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2., height + 0.05,
                 f'{yield_val:.2f}', ha='center', va='bottom', fontweight='700', 
-                color=var(--primary))
+                color='#103a52')
     
     # Set y-axis limit with some padding
     ax.set_ylim(0, max(yields) * 1.2)
     
     # Style the axes
-    ax.tick_params(colors=var(--on-surface))
+    ax.tick_params(colors='#102a43')
     for spine in ax.spines.values():
-        spine.set_edgecolor(var(--border))
+        spine.set_edgecolor('rgba(32, 117, 90, 0.12)')
     
     plt.tight_layout()
     st.pyplot(fig)
