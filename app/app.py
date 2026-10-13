@@ -260,6 +260,10 @@ st.markdown(
     .stSlider [role="slider"]:focus {
         box-shadow: 0 0 0 3px var(--accent);
     }
+    /* Slider value labels (min/max numbers) - ensure visibility on dark track */
+    .stSlider [data-baseweb="slider"] > div > div > div {
+        color: var(--on-primary) !important;
+    }
     /* Override sidebar slider background to match sidebar dark color */
     [data-testid="stSidebar"] .stSlider > div > div {
         background-color: var(--primary) !important;
