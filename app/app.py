@@ -646,7 +646,7 @@ def main():
     # Customize chart
     ax.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color='#102a43')
     ax.set_title(text(current_lang, 'yield_comparison'), fontweight='700', color='#103a52', pad=20)
-    ax.grid(True, alpha=0.3, linestyle='--', color='rgba(32, 117, 90, 0.12)')
+    ax.grid(True, alpha=0.3, linestyle='--', color='#20755a')
     
     # Add value labels on bars
     for bar, yield_val in zip(bars, yields):
@@ -661,7 +661,7 @@ def main():
     # Style the axes
     ax.tick_params(colors='#102a43')
     for spine in ax.spines.values():
-        spine.set_edgecolor('rgba(32, 117, 90, 0.12)')
+        spine.set_edgecolor('#20755a')
     
     plt.tight_layout()
     st.pyplot(fig)
@@ -690,7 +690,7 @@ def main():
         WARNING = '#d97706'
         ERROR = '#dc2626'
         ON_SURFACE = '#102a43'
-        BORDER = 'rgba(32, 117, 90, 0.12)'
+        BORDER = '#20755a'
         ON_SURFACE_VARIANT = '#103a52'
         
         with tab1:
