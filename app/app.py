@@ -187,56 +187,93 @@ st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    :root {
+        --primary: #103a52;
+        --primary-light: #1d4a6d;
+        --secondary: #14b8a6;
+        --accent: #3b82f6;
+        --success: #059669;
+        --warning: #d97706;
+        --error: #dc2626;
+        --background: #f5fff7;
+        --surface: #ffffff;
+        --on-primary: #ffffff;
+        --on-secondary: #ffffff;
+        --on-surface: #102a43;
+        --on-background: #102a43;
+        --surface-variant: #eef8ff;
+        --on-surface-variant: #103a52;
+        --border: rgba(32, 117, 90, 0.12);
+        --shadow: rgba(16, 67, 91, 0.08);
+    }
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #f5fff7 0%, #eef8ff 40%, #fff9ef 100%);
+        background: var(--background);
+        color: var(--on-background);
     }
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #102a43 0%, #1d3557 100%);
+        background: var(--primary);
     }
     [data-testid="stSidebar"] .stSelectbox label,
     [data-testid="stSidebar"] .stNumberInput label,
     [data-testid="stSidebar"] .stRadio label,
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-        color: white !important;
+        color: var(--on-primary) !important;
     }
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
     }
     h1, h2, h3 {
-        color: #173f5f;
+        color: var(--primary);
     }
     .stMetric {
-        background: linear-gradient(135deg, rgba(255,255,255,0.86), rgba(245,250,255,0.92));
-        border: 1px solid rgba(32, 117, 90, 0.12);
+        background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(245,250,255,0.95));
+        border: 1px solid var(--border);
         border-radius: 18px;
         padding: 1rem 1.2rem;
-        box-shadow: 0 10px 25px rgba(18, 67, 91, 0.08);
+        box-shadow: 0 10px 25px var(--shadow);
     }
     [data-testid="stMetricValue"] {
         font-size: 1.9rem !important;
         font-weight: 800;
-        color: #0f766e;
+        color: var(--primary);
     }
     [data-testid="stMetricLabel"] {
-        color: #3a5368;
+        color: var(--on-surface-variant);
         font-weight: 600;
     }
     .stDataFrame {
         border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 10px 25px rgba(17, 24, 39, 0.06);
+        box-shadow: 0 10px 25px var(--shadow);
+    }
+    .stDataFrame .row-headings {
+        background-color: var(--surface-variant);
+        color: var(--on-surface-variant);
+    }
+    .stDataFrame .column-headings {
+        background-color: var(--surface-variant);
+        color: var(--on-surface-variant);
     }
     .stButton > button {
         border-radius: 12px;
         border: none;
-        background: linear-gradient(135deg, #14b8a6, #3b82f6);
-        color: white;
+        background: linear-gradient(135deg, var(--secondary), var(--accent));
+        color: var(--on-primary);
         font-weight: 700;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #0d9488, #2563eb);
     }
     .stAlert {
         border-radius: 14px;
+        background-color: var(--surface-variant);
+        border-left: 4px var(--primary);
+    }
+    .stSelectbox > div > div {
+        background-color: var(--surface);
+        color: var(--on-surface-variant);
     }
     </style>
     """,
@@ -276,7 +313,19 @@ def load_data():
     """
     prices = pd.read_csv(PRICE_PATH)
     weather = pd.read_csv(WEATHER_PATH)
-    model = joblib.load(MODEL_PATH)
+    
+    # Load model with error handling for corrupted files
+    try:
+        model = joblib.load(MODEL_PATH)
+    except EOFError:
+        st.error(
+            "Model file is corrupted. Please ensure `final_model.joblib` "
+            "was uploaded correctly and try redeploying the app."
+        )
+        st.stop()
+    except Exception as e:
+        st.error(f"Failed to load model: {str(e)}")
+        st.stop()
 
     # Normalize region labels
     prices['region'] = prices['region'].map(normalize_region_name)
