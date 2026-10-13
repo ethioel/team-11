@@ -643,7 +643,7 @@ def main():
     
     # Create improved yield comparison chart
     fig, ax = plt.subplots(figsize=(8, 5))
-    scenarios = [text(current_lang, 'model_forecast'), text(current_lang, 'regional_baseline')]
+    scenarios = ['Model Forecast', 'Regional Baseline']
     yields = [prediction, 2.4]
     
     # Create bars with gradient colors
@@ -651,8 +651,8 @@ def main():
                   edgecolor=['#103a52', '#103a52'], linewidth=2)
     
     # Customize chart
-    ax.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color='#102a43')
-    ax.set_title(text(current_lang, 'yield_comparison'), fontweight='700', color='#103a52', pad=20)
+    ax.set_ylabel('Yield (tons/ha)', fontweight='600', color='#102a43')
+    ax.set_title('Yield Comparison', fontweight='700', color='#103a52', pad=20)
     ax.grid(True, alpha=0.3, linestyle='--', color='#20755a')
     
     # Add value labels on bars
@@ -673,7 +673,7 @@ def main():
     plt.tight_layout()
     st.pyplot(fig)
 
-    st.caption(text(current_lang, 'caption'))
+    st.caption('Actual yield may vary based on additional factors not captured in the model')
 
     # Professional data analysis features
     with st.expander("🔍 Pro Analysis: Yield Insights", expanded=False):
@@ -701,14 +701,14 @@ def main():
         ON_SURFACE_VARIANT = '#103a52'
         
         with tab1:
-            st.subheader(text(current_lang, 'yield_distribution') if 'yield_distribution' in T.get(current_lang, {}) else "Yield Distribution Analysis")
+            st.subheader("Yield Distribution Analysis")
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
             
             # Distribution plot with theme colors
             sns.histplot(data=train_df, x='yield_tons_per_ha', bins=30, kde=True, ax=ax1, color=PRIMARY_LIGHT)
-            ax1.axvline(prediction, color=ERROR, linestyle='--', linewidth=2, label=text(current_lang, 'model_forecast'))
+            ax1.axvline(prediction, color=ERROR, linestyle='--', linewidth=2, label='Model Forecast')
             ax1.axvline(train_df['yield_tons_per_ha'].mean(), color=SUCCESS, linestyle='-', linewidth=2, label='Dataset Mean')
-            ax1.set_xlabel(text(current_lang, 'yield_t_ha'), fontweight='600', color=ON_SURFACE)
+            ax1.set_xlabel('Yield (tons/ha)', fontweight='600', color=ON_SURFACE)
             ax1.set_ylabel('Frequency', fontweight='600', color=ON_SURFACE)
             ax1.set_title('Yield Distribution with Your Prediction', fontweight='700', color=PRIMARY)
             ax1.legend()
