@@ -243,7 +243,7 @@ st.markdown(
     }
     /* Slider/Seekbar styling for both sidebar and main content */
     .stSlider [data-baseweb="slider"] {
-        background-color: var(--background);
+        background-color: var(--primary);
         border-radius: 6px;
         height: 8px;
     }
