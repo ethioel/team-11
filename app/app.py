@@ -215,6 +215,26 @@ st.markdown(
     [data-testid="stSidebar"] {
         background: var(--primary);
     }
+    [data-testid="stSidebar"] .stSelectbox > div > div,
+    [data-testid="stSidebar"] .stNumberInput > div > div,
+    [data-testid="stSidebar"] .stSlider > div > div,
+    [data-testid="stSidebar"] .stRadio > div {
+        background-color: var(--surface);
+        color: var(--on-surface);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    [data-testid="stSidebar"] .stSelectbox > div > div > div,
+    [data-testid="stSidebar"] .stNumberInput > div > div > div,
+    [data-testid="stSidebar"] .stSlider > div > div > div,
+    [data-testid="stSidebar"] .stRadio > div > div > div {
+        color: var(--on-surface) !important;
+    }
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] select,
+    [data-testid="stSidebar"] textarea {
+        background-color: var(--surface);
+        color: var(--on-surface);
+    }
     [data-testid="stSidebar"] .stSelectbox label,
     [data-testid="stSidebar"] .stNumberInput label,
     [data-testid="stSidebar"] .stRadio label,
@@ -557,9 +577,6 @@ def main():
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
-    <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748b;">
-        Model: R²={r2_score:.3f} | RMSE={rmse:.3f} t/ha | ±{rmse*1.96:.2f} t/ha (95% interval)
-    </div>
     """, unsafe_allow_html=True)
 
     st.markdown('---')
@@ -590,11 +607,38 @@ def main():
 
     st.markdown('---')
     st.subheader(text(current_lang, 'yield_comparison'))
-    comparison = pd.DataFrame({
-        'Scenario': [text(current_lang, 'model_forecast'), text(current_lang, 'regional_baseline')],
-        text(current_lang, 'yield_t_ha'): [prediction, 2.4],
-    })
-    st.bar_chart(comparison.set_index('Scenario'))
+    
+    # Create improved yield comparison chart
+    fig, ax = plt.subplots(figsize=(8, 5))
+    scenarios = [text(current_lang, 'model_forecast'), text(current_lang, 'regional_baseline')]
+    yields = [prediction, 2.4]
+    
+    # Create bars with gradient colors
+    bars = ax.bar(scenarios, yields, color=[var('--secondary'), var(--surface-variant)], 
+                  edgecolor=['var(--primary)', var(--primary)], linewidth=2)
+    
+    # Customize chart
+    ax.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color=var(--on-surface))
+    ax.set_title(text(current_lang, 'yield_comparison'), fontweight='700', color=var(--primary), pad=20)
+    ax.grid(True, alpha=0.3, linestyle='--', color=var(--border))
+    
+    # Add value labels on bars
+    for bar, yield_val in zip(bars, yields):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + 0.05,
+                f'{yield_val:.2f}', ha='center', va='bottom', fontweight='700', 
+                color=var(--primary))
+    
+    # Set y-axis limit with some padding
+    ax.set_ylim(0, max(yields) * 1.2)
+    
+    # Style the axes
+    ax.tick_params(colors=var(--on-surface))
+    for spine in ax.spines.values():
+        spine.set_edgecolor(var(--border))
+    
+    plt.tight_layout()
+    st.pyplot(fig)
 
     st.caption(text(current_lang, 'caption'))
 
@@ -611,26 +655,45 @@ def main():
             "Price Analysis"
         ])
         
+        # Theme colors for matplotlib
+        PRIMARY = '#103a52'
+        PRIMARY_LIGHT = '#1d4a6d'
+        SECONDARY = '#14b8a6'
+        ACCENT = '#3b82f6'
+        SUCCESS = '#059669'
+        WARNING = '#d97706'
+        ERROR = '#dc2626'
+        ON_SURFACE = '#102a43'
+        BORDER = 'rgba(32, 117, 90, 0.12)'
+        ON_SURFACE_VARIANT = '#103a52'
+        
         with tab1:
-            st.subheader("Yield Distribution Analysis")
+            st.subheader(text(current_lang, 'yield_distribution') if 'yield_distribution' in T.get(current_lang, {}) else "Yield Distribution Analysis")
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
             
-            # Distribution plot
-            sns.histplot(data=train_df, x='yield_tons_per_ha', bins=30, kde=True, ax=ax1, color='steelblue')
-            ax1.axvline(prediction, color='red', linestyle='--', linewidth=2, label='Your Prediction')
-            ax1.axvline(train_df['yield_tons_per_ha'].mean(), color='green', linestyle='-', linewidth=2, label='Dataset Mean')
-            ax1.set_xlabel('Yield (tons/ha)')
-            ax1.set_ylabel('Frequency')
-            ax1.set_title('Yield Distribution with Your Prediction')
+            # Distribution plot with theme colors
+            sns.histplot(data=train_df, x='yield_tons_per_ha', bins=30, kde=True, ax=ax1, color=PRIMARY_LIGHT)
+            ax1.axvline(prediction, color=ERROR, linestyle='--', linewidth=2, label=text(current_lang, 'model_forecast'))
+            ax1.axvline(train_df['yield_tons_per_ha'].mean(), color=SUCCESS, linestyle='-', linewidth=2, label='Dataset Mean')
+            ax1.set_xlabel(text(current_lang, 'yield_t_ha'), fontweight='600', color=ON_SURFACE)
+            ax1.set_ylabel('Frequency', fontweight='600', color=ON_SURFACE)
+            ax1.set_title('Yield Distribution with Your Prediction', fontweight='700', color=PRIMARY)
             ax1.legend()
-            ax1.grid(True, alpha=0.3)
+            ax1.grid(True, alpha=0.3, color=BORDER)
             
-            # Box plot by crop type
-            sns.boxplot(data=train_df, x='crop_type', y='yield_tons_per_ha', ax=ax2, hue='crop_type', palette='Set2', legend=False)
-            ax2.scatter([0,1,2,3,4], [prediction]*5, color='red', s=100, zorder=5, label='Your Prediction')
-            ax2.set_xlabel('Crop Type')
-            ax2.set_ylabel('Yield (tons/ha)')
-            ax2.set_title('Yield by Crop Type')
+            # Box plot by crop type with theme colors
+            crop_types = train_df['crop_type'].unique()
+            n_crops = len(crop_types)
+            palette = [PRIMARY_LIGHT, SECONDARY, ACCENT, SUCCESS, WARNING]
+            if n_crops > len(palette):
+                palette = palette * (n_crops // len(palette) + 1)
+            palette = palette[:n_crops]
+            
+            sns.boxplot(data=train_df, x='crop_type', y='yield_tons_per_ha', ax=ax2, hue='crop_type', palette=palette, legend=False)
+            ax2.scatter(range(n_crops), [prediction]*n_crops, color=ERROR, s=100, zorder=5, label=text(current_lang, 'model_forecast'))
+            ax2.set_xlabel(text(current_lang, 'crop_type'), fontweight='600', color=ON_SURFACE)
+            ax2.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color=ON_SURFACE)
+            ax2.set_title('Yield by Crop Type', fontweight='700', color=PRIMARY)
             ax2.legend()
             
             plt.tight_layout()
