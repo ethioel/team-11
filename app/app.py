@@ -242,13 +242,16 @@ st.markdown(
         color: var(--on-primary) !important;
     }
     /* Slider/Seekbar styling for both sidebar and main content */
-    .stSlider [data-baseweb="slider"] {
-        background-color: var(--primary);
-        border-radius: 6px;
-        height: 8px;
+    .stSlider,
+    .stSlider [data-baseweb="slider"],
+    .stSlider [data-baseweb="slider"] > div,
+    .stSlider [data-baseweb="slider"] > div > div {
+        background-color: var(--primary) !important;
+        background: var(--primary) !important;
     }
     .stSlider [data-baseweb="slider"] > div:first-child {
-        background-color: var(--secondary);
+        background-color: var(--secondary) !important;
+        background: var(--secondary) !important;
     }
     .stSlider [role="slider"] {
         background-color: var(--secondary) !important;
@@ -259,13 +262,16 @@ st.markdown(
         box-shadow: 0 0 0 3px var(--accent);
     }
     /* Sidebar slider specific - match sidebar dark color */
-    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
-        background-color: var(--primary);
-        border-radius: 6px;
-        height: 8px;
+    [data-testid="stSidebar"] .stSlider,
+    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"],
+    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] > div,
+    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] > div > div {
+        background-color: var(--primary) !important;
+        background: var(--primary) !important;
     }
     [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] > div:first-child {
-        background-color: var(--secondary);
+        background-color: var(--secondary) !important;
+        background: var(--secondary) !important;
     }
     [data-testid="stSidebar"] .stSlider [role="slider"] {
         background-color: var(--secondary) !important;
