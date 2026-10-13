@@ -613,30 +613,32 @@ def main():
     """, unsafe_allow_html=True)
 
     st.markdown('---')
-    with st.expander("📋 Farm assumptions", expanded=False):
-        st.subheader(text(current_lang, 'farm_assumptions'))
-        summary = pd.DataFrame([
-            {'Metric': text(current_lang, 'region'), 'Value': str(region_label(current_lang, region))},
-            {'Metric': text(current_lang, 'crop_type'), 'Value': str(crop_label(current_lang, crop))},
-            {'Metric': text(current_lang, 'planting_month'), 'Value': str(planting_month)},
-            {'Metric': text(current_lang, 'survey_year'), 'Value': str(survey_year)},
-            {'Metric': text(current_lang, 'farm_size'), 'Value': str(f'{farm_size:.1f} ha')},
-            {'Metric': text(current_lang, 'fertilizer'), 'Value': str(f'{fertilizer:.1f} kg/ha')},
-            {'Metric': text(current_lang, 'soil_quality'), 'Value': str(f'{soil_quality:.2f}')},
-            {'Metric': text(current_lang, 'improved_seed'), 'Value': str(text(current_lang, 'yes') if improved_seed_int else text(current_lang, 'no'))},
-        ])
-        st.dataframe(summary, hide_index=True, width='stretch')
-
-    with st.expander("🌦️ Season outlook", expanded=False):
-        st.subheader(text(current_lang, 'season_outlook'))
-        seasonal = pd.DataFrame([
-            {'Metric': text(current_lang, 'mean_temp'), 'Value': str(f'{season["season_mean_temp"]:.1f} °C' if not pd.isna(season["season_mean_temp"]) else 'No data')},
-            {'Metric': text(current_lang, 'rainfall_total'), 'Value': str(f'{season["season_rainfall_total"]:.1f} mm' if not pd.isna(season["season_rainfall_total"]) else 'No data')},
-            {'Metric': text(current_lang, 'rainfall_mean'), 'Value': str(f'{season["season_rainfall_mean"]:.1f} mm' if not pd.isna(season["season_rainfall_mean"]) else 'No data')},
-            {'Metric': text(current_lang, 'extreme_heat_days'), 'Value': str(f'{season["season_extreme_heat_days"]:.0f}' if not pd.isna(season["season_extreme_heat_days"]) else 'No data')},
-            {'Metric': text(current_lang, 'temp_variability'), 'Value': str(f'{season["season_temp_std"]:.1f} °C' if not pd.isna(season["season_temp_std"]) else 'No data')},
-        ])
-        st.dataframe(seasonal, hide_index=True, width='stretch')
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.expander("📋 Farm assumptions", expanded=True):
+            st.subheader(text(current_lang, 'farm_assumptions'))
+            summary = pd.DataFrame([
+                {'Metric': text(current_lang, 'region'), 'Value': str(region_label(current_lang, region))},
+                {'Metric': text(current_lang, 'crop_type'), 'Value': str(crop_label(current_lang, crop))},
+                {'Metric': text(current_lang, 'planting_month'), 'Value': str(planting_month)},
+                {'Metric': text(current_lang, 'survey_year'), 'Value': str(survey_year)},
+                {'Metric': text(current_lang, 'farm_size'), 'Value': str(f'{farm_size:.1f} ha')},
+                {'Metric': text(current_lang, 'fertilizer'), 'Value': str(f'{fertilizer:.1f} kg/ha')},
+                {'Metric': text(current_lang, 'soil_quality'), 'Value': str(f'{soil_quality:.2f}')},
+                {'Metric': text(current_lang, 'improved_seed'), 'Value': str(text(current_lang, 'yes') if improved_seed_int else text(current_lang, 'no'))},
+            ])
+            st.dataframe(summary, hide_index=True, width='stretch')
+    with col2:
+        with st.expander("🌦️ Season outlook", expanded=True):
+            st.subheader(text(current_lang, 'season_outlook'))
+            seasonal = pd.DataFrame([
+                {'Metric': text(current_lang, 'mean_temp'), 'Value': str(f'{season["season_mean_temp"]:.1f} °C' if not pd.isna(season["season_mean_temp"]) else 'No data')},
+                {'Metric': text(current_lang, 'rainfall_total'), 'Value': str(f'{season["season_rainfall_total"]:.1f} mm' if not pd.isna(season["season_rainfall_total"]) else 'No data')},
+                {'Metric': text(current_lang, 'rainfall_mean'), 'Value': str(f'{season["season_rainfall_mean"]:.1f} mm' if not pd.isna(season["season_rainfall_mean"]) else 'No data')},
+                {'Metric': text(current_lang, 'extreme_heat_days'), 'Value': str(f'{season["season_extreme_heat_days"]:.0f}' if not pd.isna(season["season_extreme_heat_days"]) else 'No data')},
+                {'Metric': text(current_lang, 'temp_variability'), 'Value': str(f'{season["season_temp_std"]:.1f} °C' if not pd.isna(season["season_temp_std"]) else 'No data')},
+            ])
+            st.dataframe(seasonal, hide_index=True, width='stretch')
 
     st.markdown('---')
     st.subheader(text(current_lang, 'yield_comparison'))
@@ -723,9 +725,9 @@ def main():
             palette = palette[:n_crops]
             
             sns.boxplot(data=train_df, x='crop_type', y='yield_tons_per_ha', ax=ax2, hue='crop_type', palette=palette, legend=False)
-            ax2.scatter(range(n_crops), [prediction]*n_crops, color=ERROR, s=100, zorder=5, label=text(current_lang, 'model_forecast'))
-            ax2.set_xlabel(text(current_lang, 'crop_type'), fontweight='600', color=ON_SURFACE)
-            ax2.set_ylabel(text(current_lang, 'yield_t_ha'), fontweight='600', color=ON_SURFACE)
+            ax2.scatter(range(n_crops), [prediction]*n_crops, color=ERROR, s=100, zorder=5, label='Model Forecast')
+            ax2.set_xlabel('Crop Type', fontweight='600', color=ON_SURFACE)
+            ax2.set_ylabel('Yield (tons/ha)', fontweight='600', color=ON_SURFACE)
             ax2.set_title('Yield by Crop Type', fontweight='700', color=PRIMARY)
             ax2.legend()
             
