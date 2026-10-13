@@ -260,14 +260,7 @@ st.markdown(
     .stSlider [role="slider"]:focus {
         box-shadow: 0 0 0 3px var(--accent);
     }
-    /* Slider value labels (min/max numbers) - hide for clean look */
-    .stSlider [data-baseweb="slider"] .stSliderValue,
-    .stSlider [data-baseweb="slider"] [class*="Value"],
-    .stSlider [data-baseweb="slider"] span,
-    .stSlider > div > div:last-child {
-        display: none !important;
-    }
-    /* Ensure the actual slider thumb and track remain visible */
+    /* Slider value labels visibility */
     .stSlider [role="slider"] {
         display: block !important;
         visibility: visible !important;
