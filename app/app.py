@@ -260,7 +260,12 @@ st.markdown(
     .stSlider [role="slider"]:focus {
         box-shadow: 0 0 0 3px var(--accent);
     }
-    /* Slider value labels (min/max numbers) - ensure visibility on dark track */
+    /* Slider value labels (min/max numbers) - hide for clean look */
+    .stSlider [data-baseweb="slider"] .stSliderLabel,
+    .stSlider .stSliderLabel {
+        display: none !important;
+    }
+    /* Ensure value label is visible when shown */
     .stSlider [data-baseweb="slider"] > div > div > div {
         color: var(--on-primary) !important;
     }
