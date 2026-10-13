@@ -243,7 +243,7 @@ st.markdown(
     }
     /* Slider/Seekbar styling for both sidebar and main content */
     .stSlider [data-baseweb="slider"] {
-        background-color: var(--surface-variant);
+        background-color: var(--background);
         border-radius: 6px;
         height: 8px;
     }
@@ -258,9 +258,9 @@ st.markdown(
     .stSlider [role="slider"]:focus {
         box-shadow: 0 0 0 3px var(--accent);
     }
-    /* Sidebar slider specific */
+    /* Sidebar slider specific - match sidebar dark color */
     [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
-        background-color: var(--surface-variant);
+        background-color: var(--primary);
         border-radius: 6px;
         height: 8px;
     }
