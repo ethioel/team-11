@@ -243,7 +243,9 @@ st.markdown(
     }
     /* Slider/Seekbar styling for both sidebar and main content */
     .stSlider [data-baseweb="slider"] {
-        background-color: var(--surface-variant);
+        background-color: #1d4a6d;
+        border-radius: 6px;
+        height: 8px;
     }
     .stSlider [data-baseweb="slider"] > div:first-child {
         background-color: var(--secondary);
@@ -258,7 +260,9 @@ st.markdown(
     }
     /* Sidebar slider specific */
     [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
-        background-color: var(--surface-variant);
+        background-color: #0f766e;
+        border-radius: 6px;
+        height: 8px;
     }
     [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] > div:first-child {
         background-color: var(--secondary);
